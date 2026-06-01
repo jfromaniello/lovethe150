@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-roboto-condensed);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+/* Offset anchor jumps so section headings clear the fixed page controls. */
+[id] {
+  scroll-margin-top: 2.5rem;
+}
