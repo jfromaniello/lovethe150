@@ -12,6 +12,7 @@ import PilotNotes from "./components/PilotNotes";
 import ChapterDivider from "./components/ChapterDivider";
 import SectionNav from "./components/SectionNav";
 import PageControls from "./components/PageControls";
+import Footer from "./components/Footer";
 import { UnitsModalProvider } from "./components/UnitsModal";
 import { CHAPTERS, type NavItemId } from "./components/sections";
 import { UnitsProvider } from "./UnitsContext";
@@ -50,6 +51,7 @@ export default function HomePage() {
               </Fragment>
             ))}
           </main>
+          <Footer />
           </UnitsModalProvider>
         </SoundProvider>
       </UnitsProvider>

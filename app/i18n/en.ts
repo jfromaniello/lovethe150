@@ -634,6 +634,11 @@ export const en = {
       procedures: "Pilot Notes",
     },
   },
+  footer: {
+    madeWith: "Made with",
+    by: "by",
+    source: "Source on GitHub",
+  },
 };
 
 export type Dict = typeof en;

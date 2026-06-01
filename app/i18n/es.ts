@@ -636,4 +636,9 @@ export const es: Dict = {
       procedures: "Notas",
     },
   },
+  footer: {
+    madeWith: "Hecho con",
+    by: "por",
+    source: "Código en GitHub",
+  },
 };
