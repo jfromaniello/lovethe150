@@ -640,5 +640,11 @@ export const es: Dict = {
     madeWith: "Hecho con",
     by: "por",
     source: "Código en GitHub",
+    disclaimerProject:
+      "Love the 150 es un proyecto educativo independiente hecho por fans.",
+    disclaimerTrademark:
+      "Cessna® y Cessna 150® son marcas registradas de Textron Aviation Inc.",
+    disclaimerAffiliation:
+      "Este sitio no está afiliado, avalado ni patrocinado por Textron Aviation.",
   },
 };

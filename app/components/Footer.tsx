@@ -33,6 +33,11 @@ export default function Footer() {
           </svg>
           {t.footer.source}
         </a>
+        <div className="mt-2 flex max-w-2xl flex-col gap-1 text-[11px] leading-relaxed text-[#a8a29e]">
+          <p>{t.footer.disclaimerProject}</p>
+          <p>{t.footer.disclaimerTrademark}</p>
+          <p>{t.footer.disclaimerAffiliation}</p>
+        </div>
       </div>
     </footer>
   );

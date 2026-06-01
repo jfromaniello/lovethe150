@@ -638,6 +638,12 @@ export const en = {
     madeWith: "Made with",
     by: "by",
     source: "Source on GitHub",
+    disclaimerProject:
+      "Love the 150 is an independent fan-made educational project.",
+    disclaimerTrademark:
+      "Cessna® and Cessna 150® are trademarks of Textron Aviation Inc.",
+    disclaimerAffiliation:
+      "This website is not affiliated with, endorsed by, or sponsored by Textron Aviation.",
   },
 };
 
