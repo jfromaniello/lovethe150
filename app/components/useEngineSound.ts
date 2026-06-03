@@ -43,6 +43,9 @@ interface UseEngineSoundOptions {
   /** Whether the section is on screen. Audio is gated on this and cut when it
    *  becomes false. */
   inView: boolean;
+  /** Force silence even while active — e.g. the engine has been shut down at
+   *  idle cut-off. Cuts both the tone and the roughness chop. */
+  silenced?: boolean;
   /** Milliseconds of no `poke()` before the engine idles back to silence. */
   idleMs?: number;
 }
@@ -51,6 +54,7 @@ export function useEngineSound({
   rpm,
   roughness = 0,
   inView,
+  silenced = false,
   idleMs = 10000,
 }: UseEngineSoundOptions) {
   const { enabled: soundOn } = useSound();
@@ -115,7 +119,7 @@ export function useEngineSound({
     nodes.lfoGain.gain.setTargetAtTime(roughness * 0.18, now, 0.1);
   }, [rpm, roughness]);
 
-  const audible = soundOn && inView && active;
+  const audible = soundOn && inView && active && !silenced;
   useEffect(() => {
     const nodes = audioRef.current;
     if (!nodes) return;
@@ -126,6 +130,9 @@ export function useEngineSound({
     nodes.gain.gain.cancelScheduledValues(now);
     nodes.gain.gain.setValueAtTime(nodes.gain.gain.value, now);
     nodes.gain.gain.linearRampToValueAtTime(target, now + 0.18);
+    // When silenced, also kill the roughness chop — otherwise the LFO keeps
+    // modulating around zero and the engine never goes truly quiet.
+    if (!audible) nodes.lfoGain.gain.setTargetAtTime(0, now, 0.06);
   }, [audible, roughness]);
 
   // Cut the engine the instant the section scrolls out of view.

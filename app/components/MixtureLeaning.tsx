@@ -27,29 +27,41 @@ const TEMP_SPAN = TEMP_MAX - TEMP_MIN;
 const EGT_CURVE = 600; // °F the charge cools per unit² of mixture away from peak
 const ROP_TARGET = 50; // °F rich of peak we want the student to land on
 const ROP_TOL = 15; // ± tolerance on that 50°F
-const BUG_TOL = 18; // °F window for marking the peak accurately
 const POWER_OFFSET = 0.09; // best-power mixture is this much richer than peak EGT
 const ROUGH_MARGIN = 0.06; // roughness starts this far lean of the peak
+const STALL_MIXTURE = 0.05; // at/below this the engine is starved (idle cut-off)
+const STALL_CUT_MS = 2000; // sputter this long after cut-off, then the engine dies
 
-type ScenarioKey = "taxi" | "takeoffLanding" | "cruise";
+// Thermocouple lag on the EGT needle: the probe has thermal mass, so it is slow
+// to heat and quicker to cool. Time constants (seconds) for a first-order lag;
+// RPM and engine sound have no such lag and stay near-instant.
+const EGT_TAU_RISE = 0.55; // climbing temperature settles in ~1.5 s
+const EGT_TAU_FALL = 0.18; // falling temperature settles in ~0.5 s
+const EGT_TAU_COOL = 1.3; // slow exhaust cool-down after the engine is shut down
+
+type ScenarioKey = "taxi" | "takeoffLanding" | "cruise" | "shutdown";
 
 interface ScnConfig {
   peakMixture: number;
   peakTemp: number;
   target: readonly [number, number] | null; // positional target; null for cruise
   baseRpm: number;
+  // Non-cruise EGT reading (0..1 on the dial). The peak-EGT curve only matters
+  // in cruise; on the ground and at high power the needle just sits at a steady
+  // reading and the leaning game is positional, so we drive it from this.
+  egtIdle: number;
 }
 
-// Low-altitude scenarios put the EGT peak far out toward cut-off and run cool,
-// so within the usable rich range the needle barely moves and full rich is
-// right — exactly what you feel on the ground and at high power. Cruise gets a
-// reachable peak that the student has to hunt for.
 const SCN: Record<ScenarioKey, ScnConfig> = {
-  taxi: { peakMixture: 0.1, peakTemp: 1250, target: [0.8, 0.92], baseRpm: 1000 },
-  takeoffLanding: { peakMixture: 0.1, peakTemp: 1360, target: [0.96, 1.01], baseRpm: 2300 },
-  cruise: { peakMixture: 0.52, peakTemp: 1430, target: null, baseRpm: 2480 },
+  taxi: { peakMixture: 0.1, peakTemp: 1250, target: [0.8, 0.92], baseRpm: 1000, egtIdle: 0.26 },
+  takeoffLanding: { peakMixture: 0.1, peakTemp: 1360, target: [0.96, 1.01], baseRpm: 2300, egtIdle: 0.42 },
+  cruise: { peakMixture: 0.52, peakTemp: 1430, target: null, baseRpm: 2480, egtIdle: 0 },
+  shutdown: { peakMixture: 0.1, peakTemp: 1250, target: [0, 0.05], baseRpm: 1000, egtIdle: 0.3 },
 };
-const SCENARIO_KEYS: ScenarioKey[] = ["taxi", "takeoffLanding", "cruise"];
+const SCENARIO_KEYS: ScenarioKey[] = ["taxi", "takeoffLanding", "cruise", "shutdown"];
+// Shutdown starts from the leaned-for-taxi position; the task is to pull the
+// rest of the way to cut-off.
+const SHUTDOWN_START = 0.85;
 
 const COLOR = { ok: "#10b981", warn: "#f59e0b", bad: "#ef4444", bug: "#fbbf24" };
 
@@ -125,20 +137,22 @@ export default function MixtureLeaning() {
   const [cruisePeakMixture, setCruisePeakMixture] = useState(0.52);
   const [cruisePeakTemp, setCruisePeakTemp] = useState(1430);
   const [bugTemp, setBugTemp] = useState(TEMP_MIN); // peak bug, driven by the gauge knob
+  const [engineOff, setEngineOff] = useState(false); // shut down at idle cut-off
 
   const isCruise = activeKey === "cruise";
   const peakMixture = isCruise ? cruisePeakMixture : SCN[activeKey].peakMixture;
   const peakTemp = isCruise ? cruisePeakTemp : SCN[activeKey].peakTemp;
 
   const egtTemp = egtTempFor(mixture, peakMixture, peakTemp);
-  const egtNorm = tempToNorm(egtTemp);
+  const egtNorm = isCruise ? tempToNorm(egtTemp) : SCN[activeKey].egtIdle;
   const roughness = roughnessFor(mixture, peakMixture);
   const rpm = rpmFor(mixture, peakMixture, SCN[activeKey].baseRpm);
+  const stalled = mixture <= STALL_MIXTURE; // fuel starved, engine about to quit
 
   // New scenario → back to full rich and park the bug at the bottom. Cruise
   // gets a fresh random peak each time you enter it.
   useEffect(() => {
-    setMixture(1);
+    setMixture(activeKey === "shutdown" ? SHUTDOWN_START : 1);
     setBugTemp(TEMP_MIN);
     if (activeKey === "cruise") {
       setCruisePeakMixture(0.42 + Math.random() * 0.2);
@@ -160,17 +174,48 @@ export default function MixtureLeaning() {
     [],
   );
 
-  // EGT needle chases the model value with a little spring lag.
+  // Pull to idle cut-off and the engine sputters, then dies a couple seconds
+  // later. Enrich again and it comes back.
+  useEffect(() => {
+    if (!stalled) {
+      setEngineOff(false);
+      return;
+    }
+    const id = setTimeout(() => setEngineOff(true), STALL_CUT_MS);
+    return () => clearTimeout(id);
+  }, [stalled]);
+
+  // EGT needle: a first-order lag toward the model value, slower on the way up
+  // than down, so it behaves like a real thermocouple. Once the engine is shut
+  // down there is no more combustion and the exhaust cools off slowly. Latest
+  // targets live in refs so the animation loop never has to restart.
   const needleEgt = useMotionValue(0);
+  const egtTargetRef = useRef(egtNorm);
+  egtTargetRef.current = egtNorm;
+  const coolingRef = useRef(engineOff);
+  coolingRef.current = engineOff;
   useEffect(() => {
     if (!isInView) return;
-    const controls = animate(needleEgt, egtNorm, {
-      type: "spring",
-      stiffness: 120,
-      damping: 18,
-    });
-    return () => controls.stop();
-  }, [isInView, egtNorm, needleEgt]);
+    let raf = 0;
+    let last = 0;
+    const tick = (ts: number) => {
+      if (!last) last = ts;
+      const dt = Math.min(0.1, (ts - last) / 1000); // clamp after tab switches
+      last = ts;
+      const cooling = coolingRef.current;
+      const target = cooling ? 0 : egtTargetRef.current;
+      const cur = needleEgt.get();
+      const tau = cooling
+        ? EGT_TAU_COOL
+        : target > cur
+          ? EGT_TAU_RISE
+          : EGT_TAU_FALL;
+      needleEgt.set(cur + (target - cur) * (1 - Math.exp(-dt / tau)));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isInView, needleEgt]);
   const needleAngle = useTransform(needleEgt, (n) => normToAngle(n));
 
   const trend = useMemo(() => {
@@ -184,14 +229,12 @@ export default function MixtureLeaning() {
   const verdict = useMemo(() => {
     const fb = t.mixture.feedback;
     if (isCruise) {
-      // Bug not parked on the real peak yet → keep hunting.
-      if (Math.abs(bugTemp - peakTemp) > BUG_TOL)
-        return { text: fb.findPeak, color: COLOR.warn };
+      // Scored on the real mixture, not the bug — the bug is just a visual aid.
       if (mixture <= peakMixture)
         return roughness > 0.12
           ? { text: fb.rough, color: COLOR.bad }
           : { text: fb.stillLean, color: COLOR.warn };
-      const delta = bugTemp - egtTemp; // how far below the bug we sit, on the rich side
+      const delta = peakTemp - egtTemp; // °F below the peak, on the rich side
       if (delta >= ROP_TARGET - ROP_TOL && delta <= ROP_TARGET + ROP_TOL)
         return { text: fb.okCruise, color: COLOR.ok };
       if (delta > ROP_TARGET + ROP_TOL) return { text: fb.tooFarRich, color: COLOR.warn };
@@ -199,16 +242,33 @@ export default function MixtureLeaning() {
     }
     const target = SCN[activeKey].target!;
     if (mixture >= target[0] && mixture <= target[1]) {
-      const ok = activeKey === "taxi" ? fb.okTaxi : fb.okTakeoffLanding;
+      const ok =
+        activeKey === "taxi"
+          ? fb.okTaxi
+          : activeKey === "shutdown"
+            ? fb.okShutdown
+            : fb.okTakeoffLanding;
       return { text: ok, color: COLOR.ok };
     }
-    if (mixture > target[1]) return { text: fb.rich, color: COLOR.warn };
+    if (mixture > target[1])
+      return {
+        text: activeKey === "shutdown" ? fb.cutoffPull : fb.rich,
+        color: COLOR.warn,
+      };
     if (roughness > 0.12) return { text: fb.rough, color: COLOR.bad };
     return { text: fb.lean, color: COLOR.warn };
-  }, [isCruise, bugTemp, peakTemp, peakMixture, mixture, egtTemp, roughness, activeKey, t]);
+  }, [isCruise, peakTemp, peakMixture, mixture, egtTemp, roughness, activeKey, t]);
 
   // Engine audio: pitch from RPM, plus roughness lean of peak (the "áspero" cue).
-  const engine = useEngineSound({ rpm, roughness, inView: audioInView });
+  // Goes silent once the engine has been shut down at idle cut-off.
+  const engine = useEngineSound({
+    rpm,
+    roughness,
+    inView: audioInView,
+    silenced: engineOff,
+  });
+
+  const displayRpm = engineOff ? 0 : rpm;
 
   const handleMixtureChange = useCallback(
     (v: number) => {
@@ -219,6 +279,7 @@ export default function MixtureLeaning() {
   );
 
   const scenarioCopy = t.mixture.scenarios[activeKey];
+  const onTarget = verdict.color === COLOR.ok; // student nailed the scenario
 
   return (
     <section ref={ref} className="relative py-24 px-6">
@@ -323,6 +384,7 @@ export default function MixtureLeaning() {
               onBugChange={handleBugChange}
               labels={t.mixture.egt}
               bugLabels={t.mixture.bug}
+              onTarget={onTarget}
             />
             <MixtureLever
               mixture={mixture}
@@ -337,26 +399,45 @@ export default function MixtureLeaning() {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="space-y-6 order-2"
           >
-            <div className="p-4 bg-[#1f2937] text-[#f4efe6] min-h-[200px]">
+            <div
+              className="p-4 bg-[#1f2937] text-[#f4efe6] min-h-[200px] transition-shadow duration-300"
+              style={{
+                boxShadow: onTarget
+                  ? "inset 0 0 0 2px rgba(16,185,129,0.7), 0 0 24px rgba(16,185,129,0.25)"
+                  : undefined,
+              }}
+            >
               <div className="aviation-mono text-xs tracking-wider opacity-70 mb-2">
                 {t.mixture.current}
               </div>
               <div className="aviation-header text-2xl mb-2 tabular-nums">
                 {Math.round(mixture * 100)}%
                 <span className="ml-3 aviation-mono text-sm opacity-70">
-                  {rpm} {t.mixture.rpmLabel}
+                  {displayRpm} {t.mixture.rpmLabel}
                 </span>
               </div>
-              <motion.div
-                key={verdict.text}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.18 }}
-                className="aviation-mono text-[13px] uppercase tracking-[0.12em] mb-2"
-                style={{ color: verdict.color }}
-              >
-                {verdict.text}
-              </motion.div>
+              {onTarget ? (
+                <motion.div
+                  key={verdict.text}
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 15 }}
+                  className="inline-flex items-center mb-2 px-3 py-1.5 rounded-sm bg-[#10b981] text-[#06281e] aviation-mono text-[13px] font-bold uppercase tracking-[0.12em] shadow-[0_0_20px_rgba(16,185,129,0.55)]"
+                >
+                  {verdict.text}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={verdict.text}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="aviation-mono text-[13px] uppercase tracking-[0.12em] mb-2"
+                  style={{ color: verdict.color }}
+                >
+                  {verdict.text}
+                </motion.div>
+              )}
               <p className="text-sm leading-relaxed opacity-90">{trend}</p>
             </div>
 
@@ -473,6 +554,7 @@ function EgtGauge({
   onBugChange,
   labels,
   bugLabels,
+  onTarget = false,
 }: {
   needleAngle: MotionValue<number>;
   bugNorm: number | null;
@@ -480,6 +562,7 @@ function EgtGauge({
   onBugChange?: (deltaF: number) => void;
   labels: { title: string; max: string };
   bugLabels?: { label: string; increase: string; decrease: string };
+  onTarget?: boolean;
 }) {
   const maxPos = polarToCartesian(200, 200, 100, normToAngle(0.93));
   const bug = bugNorm;
@@ -574,6 +657,16 @@ function EgtGauge({
         </motion.g>
       </svg>
       <div className="absolute inset-0 rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.08)] pointer-events-none" />
+      {/* Green halo when the student is on target. */}
+      {onTarget ? (
+        <div
+          className="absolute inset-0 rounded-full pointer-events-none animate-pulse"
+          style={{
+            boxShadow:
+              "0 0 0 3px rgba(16,185,129,0.85), 0 0 30px 6px rgba(16,185,129,0.5)",
+          }}
+        />
+      ) : null}
       {showKnob && onBugChange ? (
         <BugKnob bugNorm={bug ?? 0} onChange={onBugChange} labels={bugLabels} />
       ) : null}
