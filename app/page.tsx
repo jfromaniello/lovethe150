@@ -6,6 +6,7 @@ import AirspeedIndicator from "./components/AirspeedIndicator";
 import StallBankAngle from "./components/StallBankAngle";
 import FlapsConfig from "./components/FlapsConfig";
 import ThrottlePower from "./components/ThrottlePower";
+import MixtureLeaning from "./components/MixtureLeaning";
 import FuelSystem from "./components/FuelSystem";
 import ElevatorTrim from "./components/ElevatorTrim";
 import PilotNotes from "./components/PilotNotes";
@@ -26,6 +27,7 @@ const SECTIONS: Record<NavItemId, React.ComponentType> = {
   stall: StallBankAngle,
   flaps: FlapsConfig,
   throttle: ThrottlePower,
+  mixture: MixtureLeaning,
   fuel: FuelSystem,
   trim: ElevatorTrim,
   procedures: PilotNotes,

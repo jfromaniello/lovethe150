@@ -17,6 +17,7 @@ export type NavItemId =
   | "stall"
   | "flaps"
   | "throttle"
+  | "mixture"
   | "fuel"
   | "trim"
   | "procedures";
@@ -33,9 +34,9 @@ export interface Chapter {
 export const CHAPTERS: Chapter[] = [
   { key: "aircraft", part: "I", items: ["heritage", "overview"] },
   { key: "speeds", part: "II", items: ["airspeed", "stall"] },
-  // Ordered to follow a real flight: dip the fuel (preflight) → set power →
-  // trim off the load → configure flaps for approach/landing.
-  { key: "controls", part: "III", items: ["fuel", "throttle", "trim", "flaps"] },
+  // Ordered to follow a real flight: dip the fuel (preflight), set power, lean
+  // the mixture, trim off the load, configure flaps for approach/landing.
+  { key: "controls", part: "III", items: ["fuel", "throttle", "mixture", "trim", "flaps"] },
   { key: "operation", part: "IV", items: ["procedures"] },
 ];
 // MPH vs Knots is no longer a section — it lives in the "why?" units modal.

@@ -369,6 +369,100 @@ export const en = {
       },
     },
   },
+  mixture: {
+    title: "Mixture & Leaning",
+    lead:
+      "With a fixed-pitch propeller the 150 has no prop control, so the engine runs on just two knobs: the throttle and, right beside it, the red mixture knob, which is the one students reach for last. The mixture knob sets how much fuel the carburetor blends into the incoming air: push it in for a rich mixture, pull it out and the charge gets leaner. The air thins as you climb, so a setting that is right on the ground runs far too rich up high, with rough running, fouled plugs and wasted fuel. Leaning trims the fuel back to match the air, and finding the right point is what this section is about.",
+    intro:
+      "The knob pulls a cable to the mixture control on the Marvel-Schebler carburetor, metering the fuel flow; pull it all the way out and you reach IDLE CUT-OFF, which is how you shut the engine down. Many 150s left the factory with no EGT gauge at all, so the single-probe exhaust gas temperature gauge shown here is a common aftermarket addition. It reads the exhaust off one cylinder: as you lean, EGT climbs to a peak and then falls again once the charge goes lean of that peak. That peak is the reference the whole leaning technique is built around.",
+    intro2:
+      "Pick a scenario, then set the red knob. Watch the EGT needle and listen to the engine: lean past the peak and it starts to run rough. The trick is to find the peak, mark it with the bug, then enrich about 50°F back down the rich side.",
+    callout:
+      "Leaning is for cruise. Down low and at high power (takeoff, climb, landing) the engine wants full rich for cooling and full available power. The numbers here are illustrative, built to teach the technique, not a substitute for the leaning procedure in the POH for your aircraft.",
+    current: "CURRENT MIXTURE",
+    rpmLabel: "RPM",
+    pilotNote: "PILOT NOTE",
+    pilotNoteBody:
+      "No EGT? Lean the same way by ear and by the tach: pull the knob out slowly until the engine just begins to run rough, then push it back in until it smooths out and runs its best. That is your rich-of-peak setting without an instrument.",
+    egt: {
+      title: "EGT",
+      max: "MAX",
+    },
+    bug: {
+      label: "PEAK BUG",
+      increase: "Move the peak bug up",
+      decrease: "Move the peak bug down",
+    },
+    trend: {
+      rich: "Rich side, EGT low and cool",
+      rising: "Leaning, EGT climbing toward the peak",
+      peak: "At the peak, lean no further",
+      lean: "Lean of peak, EGT falling",
+    },
+    lever: {
+      title: "MIXTURE",
+      rich: "RICH",
+      lean: "PULL LEAN",
+      cutoff: "IDLE CUT-OFF",
+    },
+    scenarioLabel: "SCENARIO",
+    scenarios: {
+      taxi: {
+        title: "Taxi out",
+        scene: "On the ground, idling and taxiing to the run-up area.",
+        explain:
+          "The O-200 fouls its plugs easily at low power on the ground. Pull the knob out a little, roughly half an inch, to lean for taxi. Just remember to push it back to full rich before the run-up and takeoff.",
+      },
+      takeoffLanding: {
+        title: "Takeoff & landing",
+        scene: "Full power on the runway, or on final approach to land.",
+        explain:
+          "Push the mixture to FULL RICH and leave it there. Full rich gives maximum power for takeoff and the extra fuel helps cool the engine. On landing it matters just as much: if you have to go around, full rich means full power is there the instant you push the throttle in, with no leaning to undo first.",
+      },
+      cruise: {
+        title: "Cruise at 5,000 ft",
+        scene: "Level, settled in cruise. The air up here is thin and the engine is running rich.",
+        explain:
+          "Find the ideal mixture. Lean slowly and watch the EGT climb. When the needle stops rising you are at the peak, so mark it with the yellow bug. Then enrich until the needle drops about 50°F, two tick marks, back down the rich side. That is 50°F rich of peak.",
+      },
+    },
+    feedback: {
+      rich: "Too rich. Lean it out.",
+      lean: "Too lean. Enrich it.",
+      rough: "The engine is running rough, you went past the peak. Enrich until it smooths out.",
+      findPeak: "Lean to find the peak, then turn the knob to park the yellow bug on it.",
+      stillLean: "Lean of the peak. Enrich back toward the bug.",
+      leanToRop: "Bug parked on the peak. Now enrich until the needle sits 50°F below it.",
+      tooFarRich: "Too rich now, more than 50°F below the peak. Lean back a touch.",
+      okTaxi: "✓ LEANED FOR TAXI",
+      okTakeoffLanding: "✓ FULL RICH",
+      okCruise: "✓ 50°F RICH OF PEAK",
+    },
+    retry: "New target",
+    regimesTitle: "MIXTURE RÉGIMES",
+    regimes: {
+      fullRich: {
+        label: "Full Rich",
+        body: "Knob full in. Takeoff, climb, landing and low-altitude flight. Maximum power and cooling.",
+      },
+      bestPower: {
+        label: "Best Power",
+        body: "Slightly rich of peak EGT. The mixture for max power once you are leaning, used in cruise climb.",
+      },
+      peak: {
+        label: "Peak EGT",
+        body: "The hottest the exhaust runs. The reference point you lean to, then enrich away from.",
+      },
+      leanOfPeak: {
+        label: "Lean of Peak",
+        body: "Past the peak. EGT falls again and the engine runs rough on a carbureted O-200. Enrich back.",
+      },
+      cutoff: {
+        label: "Idle Cut-Off",
+        body: "Knob full out. No fuel. This is how you shut the engine down at the end of the flight.",
+      },
+    },
+  },
   fuel: {
     title: "Fuel & Fuel System",
     intro:
@@ -629,6 +723,7 @@ export const en = {
       stall: "Stall & Bank",
       flaps: "Flaps",
       throttle: "Throttle",
+      mixture: "Mixture",
       fuel: "Fuel",
       trim: "Trim",
       procedures: "Pilot Notes",

@@ -371,6 +371,100 @@ export const es: Dict = {
       },
     },
   },
+  mixture: {
+    title: "Mezcla y Leaneo",
+    lead:
+      "Con hélice de paso fijo, el 150 no tiene control de hélice, así que el motor se maneja con solo dos pomos: el acelerador y, justo al lado, el pomo rojo de mezcla, que es el que los estudiantes usan último. El pomo de mezcla define cuánto combustible mezcla el carburador con el aire que entra: empujalo para una mezcla rica, tiralo y la carga se vuelve más pobre. Con la altura el aire se enrarece, así que un ajuste correcto en tierra queda demasiado rico allá arriba, con motor áspero, bujías engrasadas y combustible desperdiciado. Leanear ajusta el combustible para que acompañe al aire, y encontrar el punto justo es de lo que trata esta sección.",
+    intro:
+      "El pomo tira de un cable hasta el control de mezcla en el carburador Marvel-Schebler, dosificando el flujo de combustible; tiralo del todo y llegás a IDLE CUT-OFF, que es como se apaga el motor. Muchos 150 salieron de fábrica sin ningún indicador de EGT, así que el medidor de temperatura de gases de escape de una sonda que ves acá es un agregado aftermarket común. Lee el escape de un solo cilindro: a medida que empobrecés, la EGT sube hasta un pico y después vuelve a bajar cuando la carga pasa al lado pobre. Ese pico es la referencia sobre la que se construye toda la técnica de leaneo.",
+    intro2:
+      "Elegí un escenario y ajustá el pomo rojo. Mirá la aguja del EGT y escuchá el motor: si te pasás de pobre, empieza a correr áspero. El truco es encontrar el pico, marcarlo con el bug y después enriquecer unos 50°F por el lado rico.",
+    callout:
+      "El leaneo es para crucero. Abajo y a alta potencia (despegue, ascenso, aterrizaje) el motor quiere full rich para enfriarse y dar toda su potencia. Los números acá son ilustrativos, pensados para enseñar la técnica, no reemplazan el procedimiento de leaneo del POH de tu avión.",
+    current: "MEZCLA ACTUAL",
+    rpmLabel: "RPM",
+    pilotNote: "NOTA AL PILOTO",
+    pilotNoteBody:
+      "¿Sin EGT? Leanéa igual, de oído y con el tacómetro: tirá el pomo despacio hasta que el motor apenas empieza a ponerse áspero, después empujalo de nuevo hasta que se suaviza y rinde mejor. Ese es tu punto rich of peak sin instrumento.",
+    egt: {
+      title: "EGT",
+      max: "MÁX",
+    },
+    bug: {
+      label: "BUG DE PICO",
+      increase: "Subir el bug de pico",
+      decrease: "Bajar el bug de pico",
+    },
+    trend: {
+      rich: "Lado rico, EGT baja y fría",
+      rising: "Empobreciendo, EGT subiendo hacia el pico",
+      peak: "En el pico, no empobrezcas más",
+      lean: "Pasado el pico, EGT bajando",
+    },
+    lever: {
+      title: "MEZCLA",
+      rich: "RICA",
+      lean: "TIRAR POBRE",
+      cutoff: "IDLE CUT-OFF",
+    },
+    scenarioLabel: "ESCENARIO",
+    scenarios: {
+      taxi: {
+        title: "Carreteo",
+        scene: "En tierra, en ralentí y rodando hacia la zona de prueba de motor.",
+        explain:
+          "El O-200 engrasa las bujías fácil a baja potencia en tierra. Tirá el pomo un poco hacia afuera, alrededor de media pulgada, para leanear en carreteo. Solo acordate de volverlo a full rich antes del run-up y el despegue.",
+      },
+      takeoffLanding: {
+        title: "Despegue y aterrizaje",
+        scene: "Potencia máxima en pista, o en aproximación final para aterrizar.",
+        explain:
+          "Llevá la mezcla a FULL RICH y dejala ahí. Full rich da la máxima potencia para el despegue y el combustible extra ayuda a enfriar el motor. En el aterrizaje importa igual: si tenés que motorizar, full rich significa que toda la potencia está disponible apenas empujás el acelerador, sin tener que deshacer ningún leaneo primero.",
+      },
+      cruise: {
+        title: "Crucero a 5.000 ft",
+        scene: "Nivelado, ya establecido en crucero. Acá arriba el aire es fino y el motor está corriendo rico.",
+        explain:
+          "Encontrá la mezcla ideal. Empobrecé despacio y mirá la EGT subir. Cuando la aguja deja de subir estás en el pico, así que marcalo con el bug amarillo. Después enriquecé hasta que la aguja baje unos 50°F, dos marcas, por el lado rico. Eso es 50°F rich of peak.",
+      },
+    },
+    feedback: {
+      rich: "Demasiado rica. Empobrecé.",
+      lean: "Demasiado pobre. Enriquecé.",
+      rough: "El motor está corriendo áspero, te pasaste del pico. Enriquecé hasta que se suavice.",
+      findPeak: "Empobrecé para encontrar el pico, después girá el knob para parar el bug amarillo encima.",
+      stillLean: "Del lado pobre del pico. Enriquecé hacia el bug.",
+      leanToRop: "Bug parado en el pico. Ahora enriquecé hasta que la aguja quede 50°F por debajo.",
+      tooFarRich: "Demasiado rica ahora, más de 50°F por debajo del pico. Empobrecé un poco.",
+      okTaxi: "✓ LEANEADA PARA CARRETEO",
+      okTakeoffLanding: "✓ FULL RICH",
+      okCruise: "✓ 50°F RICH OF PEAK",
+    },
+    retry: "Nuevo objetivo",
+    regimesTitle: "REGÍMENES DE MEZCLA",
+    regimes: {
+      fullRich: {
+        label: "Full Rich",
+        body: "Pomo todo adentro. Despegue, ascenso, aterrizaje y vuelo a baja altura. Máxima potencia y enfriamiento.",
+      },
+      bestPower: {
+        label: "Mejor Potencia",
+        body: "Apenas rich of peak. La mezcla de máxima potencia una vez que estás leaneando, se usa en ascenso de crucero.",
+      },
+      peak: {
+        label: "Pico de EGT",
+        body: "Lo más caliente que corre el escape. El punto de referencia al que leaneás y desde el que después enriquecés.",
+      },
+      leanOfPeak: {
+        label: "Lean of Peak",
+        body: "Pasado el pico. La EGT vuelve a bajar y el motor corre áspero en un O-200 carburado. Volvé a enriquecer.",
+      },
+      cutoff: {
+        label: "Idle Cut-Off",
+        body: "Pomo todo afuera. Sin combustible. Así se apaga el motor al final del vuelo.",
+      },
+    },
+  },
   fuel: {
     title: "Combustible y Sistema",
     intro:
@@ -631,6 +725,7 @@ export const es: Dict = {
       stall: "Pérdida",
       flaps: "Flaps",
       throttle: "Acelerador",
+      mixture: "Mezcla",
       fuel: "Combustible",
       trim: "Compensador",
       procedures: "Notas",

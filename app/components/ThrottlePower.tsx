@@ -10,9 +10,9 @@ import {
 } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../LanguageContext";
-import { useSound } from "../SoundContext";
 import SectionHeader from "./SectionHeader";
 import TechnicalDetail from "./TechnicalDetail";
+import { useEngineSound } from "./useEngineSound";
 
 // Continental O-200-A tachometer for the Cessna 150. The dial sweeps ~270°
 // from lower-left (0 RPM, 7 o'clock) clockwise to lower-right (3000 RPM,
@@ -100,26 +100,13 @@ function rpmToAngle(rpm: number): number {
   );
 }
 
-type EngineAudio = {
-  ctx: AudioContext;
-  osc: OscillatorNode;
-  sub: OscillatorNode;
-  filter: BiquadFilterNode;
-  gain: GainNode;
-};
-
 export default function ThrottlePower() {
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const { t, fmt } = useI18n();
-  const { enabled: soundOn } = useSound();
   // Live in-view (the entry `isInView` above latches once and never resets).
   const audioInView = useInView(ref, { amount: 0.3 });
   const [throttle, setThrottle] = useState(0);
-  // The engine "runs" for a few seconds after you move the throttle, then
-  // idles back to silence. It also cuts out the moment the section leaves view.
-  const [engineActive, setEngineActive] = useState(false);
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // RPM the dial is converging to. While the user is dragging this is the
   // ground truth — the needle's spring chases it.
@@ -176,101 +163,16 @@ export default function ThrottlePower() {
     return { ...c.takeoff, color: "#f59e0b" };
   }, [targetRpm, t]);
 
-  // --- Engine audio ----------------------------------------------------------
-  // Sawtooth + square sub-octave through a lowpass. Fundamental tracks RPM so
-  // the engine "buzzes" higher as you push the throttle in.
-  const audioRef = useRef<EngineAudio | null>(null);
-
-  const ensureAudio = useCallback(() => {
-    if (audioRef.current) return audioRef.current;
-    const Ctor =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext;
-    if (!Ctor) return null;
-    const ctx = new Ctor();
-    const osc = ctx.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.value = 30;
-    const sub = ctx.createOscillator();
-    sub.type = "square";
-    sub.frequency.value = 60;
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 600;
-    filter.Q.value = 2;
-    const gain = ctx.createGain();
-    gain.gain.value = 0;
-    osc.connect(filter);
-    sub.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    sub.start();
-    audioRef.current = { ctx, osc, sub, filter, gain };
-    return audioRef.current;
-  }, []);
-
-  // Track RPM in audio params. Tracks targetRpm (not the needle) so the audio
-  // reacts immediately to the lever instead of lagging behind the spring.
-  useEffect(() => {
-    const nodes = audioRef.current;
-    if (!nodes) return;
-    const now = nodes.ctx.currentTime;
-    const norm = (targetRpm - IDLE_RPM) / (FULL_RPM - IDLE_RPM); // 0..1
-    const base = 28 + norm * 72; // 28→100 Hz, low growl → buzzy bass
-    nodes.osc.frequency.setTargetAtTime(base, now, 0.08);
-    nodes.sub.frequency.setTargetAtTime(base * 2, now, 0.08);
-    nodes.filter.frequency.setTargetAtTime(500 + norm * 1500, now, 0.08);
-  }, [targetRpm]);
-
-  const audible = soundOn && audioInView && engineActive;
-  useEffect(() => {
-    const nodes = audioRef.current;
-    if (!nodes) return;
-    if (audible && nodes.ctx.state === "suspended") {
-      void nodes.ctx.resume();
-    }
-    const now = nodes.ctx.currentTime;
-    const target = audible ? 0.16 : 0;
-    nodes.gain.gain.cancelScheduledValues(now);
-    nodes.gain.gain.setValueAtTime(nodes.gain.gain.value, now);
-    nodes.gain.gain.linearRampToValueAtTime(target, now + 0.18);
-  }, [audible]);
-
-  // Cut the engine the instant the section scrolls out of view.
-  useEffect(() => {
-    if (!audioInView) {
-      setEngineActive(false);
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    }
-  }, [audioInView]);
-
-  useEffect(() => {
-    return () => {
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-      const nodes = audioRef.current;
-      if (!nodes) return;
-      try {
-        nodes.osc.stop();
-        nodes.sub.stop();
-        nodes.ctx.close();
-      } catch {}
-      audioRef.current = null;
-    };
-  }, []);
+  // Engine audio: the fundamental tracks RPM so it buzzes higher as you push
+  // the throttle in. Fixed-pitch, no rough mode, so roughness stays at 0.
+  const engine = useEngineSound({ rpm: targetRpm, inView: audioInView });
 
   const handleThrottleChange = useCallback(
     (v: number) => {
       setThrottle(Math.max(0, Math.min(1, v)));
-      if (!soundOn) return;
-      const nodes = ensureAudio();
-      if (nodes && nodes.ctx.state === "suspended") void nodes.ctx.resume();
-      setEngineActive(true);
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-      idleTimer.current = setTimeout(() => setEngineActive(false), 10000);
+      engine.poke();
     },
-    [soundOn, ensureAudio],
+    [engine],
   );
 
   const displayRpm = Math.round(targetRpm / 10) * 10;
