@@ -125,7 +125,13 @@ function normToAngle(norm: number) {
 export default function MixtureLeaning() {
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const audioInView = useInView(ref, { amount: 0.3 });
+  // Gate audio on the interactive controls being on screen, not the whole
+  // section. This section is tall enough that 30% of it never fits a phone
+  // viewport at once, so anchoring `audioInView` to <section> kept the engine
+  // muted on mobile. The controls block is short, so 30% is always visible
+  // while you are actually working the knob.
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const audioInView = useInView(controlsRef, { amount: 0.3 });
   const { t } = useI18n();
 
   const [activeKey, setActiveKey] = useState<ScenarioKey>("taxi");
@@ -372,6 +378,7 @@ export default function MixtureLeaning() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <motion.div
+            ref={controlsRef}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
             transition={{ duration: 0.8, delay: 0.2 }}
